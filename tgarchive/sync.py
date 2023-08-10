@@ -175,6 +175,10 @@ class Sync:
                 elif isinstance(m.action, telethon.tl.types.MessageActionChatDeleteUser):
                     typ = "user_left"
 
+#            print( "m", m,  m.post_author, m.sender_id, m.sender, dir(m))# m.get_sender().title, m.get_input_sender().title, dir(m.get_sender)) 
+#            print ( m.post_author)
+#            print (m.sender_id)
+#            print (m.from_id, m.id, m.chat, m.chat_id)
             yield Message(
                 type=typ,
                 id=m.id,
@@ -182,8 +186,9 @@ class Sync:
                 edit_date=m.edit_date,
                 content=sticker if sticker else m.raw_text,
                 reply_to=m.reply_to_msg_id if m.reply_to and m.reply_to.reply_to_msg_id else None,
-                user=self._get_user(m.sender),
-                media=med
+                #user=self._get_user(m.sender), # this is original
+                user=self._get_user(m.sender, pu=m.post_author, ch=m.get_sender().title), # arul modified it
+                media=med,
             )
 
     def _fetch_messages(self, group, offset_id, ids=None) -> Message:
@@ -202,8 +207,18 @@ class Sync:
             logging.info(
                 "flood waited: have to wait {} seconds".format(e.seconds))
 
-    def _get_user(self, u) -> User:
+
+    def _get_user(self, u, pu, ch) -> User:
         tags = []
+        
+        def myHash(text:str): # Arul
+            hash=0
+            for ch in text:
+                hash = ( hash*281  ^ ord(ch)*997) & 0xFFFFFFFF
+            return hash
+        pu = pu if pu else 'None'
+        signature_id = myHash(pu)
+        print ("signature_id", signature_id, pu)
         is_normal_user = isinstance(u, telethon.tl.types.User)
 
         if isinstance(u, telethon.tl.types.ChannelForbidden):
@@ -235,10 +250,15 @@ class Sync:
             except Exception as e:
                 logging.error(
                     "error downloading avatar: #{}: {}".format(u.id, e))
-
+        #print(u.id, u.username, is_normal_user,u.signatures,  pu)
+#        print("posted by", pu)
+#        tags.append(pu) 
         return User(
-            id=u.id,
-            username=u.username if u.username else str(u.id),
+            #id=u.id,
+            id=signature_id,
+            #username=u.username if u.username else str(u.id), # original
+            username=u.username if u.username else pu,
+            #username=u.username if u.username else ch,
             first_name=u.first_name if is_normal_user else None,
             last_name=u.last_name if is_normal_user else None,
             tags=tags,
@@ -357,7 +377,7 @@ class Sync:
             return None
 
         im = Image.open(b)
-        im.thumbnail(self.config["avatar_size"], Image.LANCZOS)
+        im.thumbnail(self.config["avatar_size"], Image.ANTIALIAS)
         im.save(fpath, "JPEG")
 
         return fname
