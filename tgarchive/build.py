@@ -80,6 +80,7 @@ class Build:
                 # to link to replies in arbitrary positions across months, paginated pages.
                 for m in messages:
                     self.page_ids[m.id] = fname
+                    #print (m.id, m.user.tags)
 
                 if self.config["publish_rss_feed"]:
                     rss_entries.extend(messages)
@@ -141,7 +142,10 @@ class Build:
                                     self.page_ids[m.id], m.id)
             e = f.add_entry()
             e.id(url)
-            e.title("@{} on {} (#{})".format(m.user.username, m.date, m.id))
+            e.title("@{} on {} (#{})".format(m.user.username, m.date, m.id))# original
+#            print (m.user.tags)
+            #print (m.user, dir(m.user), dir(m))
+            #e.title("@{} on {} (#{})".format(m.post_author, m.date, m.id)) # Arul modified this
             e.link({"href": url})
             e.published(m.date)
 
